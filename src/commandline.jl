@@ -46,7 +46,7 @@ end
     "--beam"
         help = "The name of the beam model to use ($(join(keys(beam_dictionary),",")))."
         arg_type = ASCIIString
-        default = "constant"
+        default = "sine"
     "--maxiter"
         help = "Set the maximum number of (Mitch|Stef)Cal iterations to take on each frequency channel."
         arg_type = Int
@@ -76,7 +76,7 @@ end
     "--beam"
         help = "The name of the beam model to use ($(join(keys(beam_dictionary),",")))."
         arg_type = ASCIIString
-        default = "constant"
+        default = "sine"
     "--maxiter"
         help = "Set the maximum number of (Mitch|Stef)Cal iterations to take on each frequency channel."
         arg_type = Int
@@ -99,10 +99,26 @@ end
         help = "A JSON file describing the sources to be peeled from the given measurement set."
         arg_type = ASCIIString
         required = true
+    "--output"
+        help = "If provided, write the direction dependent calibration solutions to disk as NumPy arrays."
+        arg_type = ASCIIString
+        default = ""
     "--beam"
         help = "The name of the beam model to use ($(join(keys(beam_dictionary),",")))."
         arg_type = ASCIIString
-        default = "constant"
+        default = "sine"
+    "--peeliter"
+        help = "The number of iterations to take while peeling."
+        arg_type = Int
+        default = 3
+    "--maxiter"
+        help = "Set the maximum number of (Mitch|Stef)Cal iterations to take on each frequency channel."
+        arg_type = Int
+        default  = 20
+    "--tolerance"
+        help = "Set the relative tolerance used to determine convergence."
+        arg_type = Float64
+        default  = 1e-3
     "--minuvw"
         help = "The minimum baseline length (measured in wavelengths) to use while peeling sources. This parameter can be used to mitigate sensitivity to unmodeled diffuse emission."
         arg_type = Float64
@@ -171,7 +187,17 @@ function run_peel(args)
     ms = MeasurementSet(ascii(args["input"]))
     sources = readsources(args["sources"])
     beam = beam_dictionary[args["beam"]]()
-    peel!(GainCalibration,ms,sources,beam,minuvw=args["minuvw"])
+    calibrations = peel!(GainCalibration,ms,sources,beam,
+                         peeliter=args["peeliter"],
+                         maxiter=args["maxiter"],
+                         tolerance=args["tolerance"],
+                         minuvw=args["minuvw"])
+    if !isempty(args["output"])
+        for i = 1:length(calibrations)
+            filename = args["output"]*"-$i.npz"
+            write_for_python(filename, calibrations[i])
+        end
+    end
 end
 
 function run_applycal(args)
