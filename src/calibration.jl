@@ -292,7 +292,7 @@ function polcal(ms::MeasurementSet,
     flags = get_flags(ms)
     flag_short_baselines!(flags,minuvw,ms.u,ms.v,ms.w,ms.ν)
     set_model_data!(ms,model)
-    polcal!(calibration,data,model,flags,
+    solve!(calibration,data,model,flags,
             ms.ant1,ms.ant2,maxiter,tolerance)
     calibration
 end
